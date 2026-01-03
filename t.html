@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi Yield Volatility Analysis | Raincloud Plot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+        :root {
+            --background-color: #121212;
+            --text-color: #E0E0E0;
+            --container-bg: #1E1E1E;
+            --border-color: #444;
+            --highlight-color: #00A3FF;
+            --accent-color-1: #00A3FF;
+            --accent-color-2: #8E44AD;
+            --accent-color-3: #1ABC9C;
+            --accent-color-4: #F1C40F;
+            --accent-color-5: #E74C3C;
+            --glass-white: rgba(255, 255, 255, 0.1);
+            --glass-white-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--text-color);
+            font-size: 2.5rem;
+            text-align: center;
+        }
+
+        #chart-container {
+            position: relative;
+            width: 90vw;
+            max-width: 1400px;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        .tooltip {
+            position: absolute; text-align: center; padding: 8px 12px;
+            font-size: 12px; background: #2c2c2c; border: 1px solid var(--border-color);
+            border-radius: 4px; pointer-events: none; opacity: 0;
+            transition: opacity 0.2s; z-index: 1001; transform: translate(15px, 5px); 
+        }
+
+        .controls {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+        }
+        
+        .control-group { display: flex; align-items: center; gap: 0.8rem; }
+        .controls label { font-size: 0.9rem; }
+        .controls input {
+            font-family: 'Roboto Mono', monospace; background-color: #333; color: var(--text-color);
+            border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 12px;
+        }
+        .controls input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        
+        #legend { 
+            margin-top: 1.5rem; display: flex; justify-content: center; 
+            flex-wrap: wrap; gap: 1.5rem; font-size: 0.8rem; 
+        }
+        .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+        .legend-symbol { width: 15px; height: 15px; }
+
+        svg { display: block; width: 100%; height: auto; }
+        .axis path { stroke: transparent; }
+        .axis line { stroke: var(--border-color); }
+        .axis text, .axis-title { fill: var(--text-color); font-family: 'Roboto Mono', monospace; font-size: 12px; }
+        .protocol-axis .tick text { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; }
+        .grid line { stroke: var(--border-color); stroke-opacity: 0.15; shape-rendering: crispEdges; }
+
+        /* --- Glassmorphism UI --- */
+        .glass-ui {
+            background: var(--glass-white);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-white-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+
+        .controls button {
+             font-family: 'Roboto Mono', monospace;
+             padding: 8px 12px;
+             cursor: pointer;
+             transition: background-color 0.2s, color 0.2s;
+        }
+        
+        #tour-overlay { 
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.5); z-index: 998; display: none; 
+            -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+        }
+        #tour-popover { 
+            position: absolute; padding: 1.5rem; width: 320px;
+            z-index: 1000; display: none; transition: top 0.3s ease, left 0.3s ease;
+        }
+        #tour-popover h3 { font-family: 'Space Grotesk', sans-serif; color: var(--text-color); margin-top: 0; text-shadow: 0 0 5px rgba(0,0,0,0.5);}
+        #tour-popover p { line-height: 1.6; }
+        
+        .tour-navigation { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+        .tour-nav-buttons { display: flex; gap: 8px; }
+
+        .tour-navigation button { font-weight: bold; }
+        .tour-navigation button:disabled { color: rgba(255,255,255,0.4); background: transparent; cursor: not-allowed; }
+
+        .tour-highlight { 
+            outline: 2px solid var(--highlight-color); outline-offset: 4px; 
+            border-radius: 4px; box-shadow: 0 0 20px var(--highlight-color);
+            transition: all 0.3s ease; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>DeFi Yield Volatility Analysis</h1>
+
+    <div id="chart-container">
+        <div class="controls">
+            <div class="control-group"><button id="start-tour-btn" class="glass-ui">Start Tour</button></div>
+            <div id="controls-group" class="control-group">
+                <label for="date-start">Date Range:</label><input type="date" id="date-start"><span>-</span><input type="date" id="date-end">
+            </div>
+            <div class="control-group">
+                <label for="scale-toggle">Yield Scale:</label><button id="scale-toggle" class="glass-ui">Switch to Log</button>
+            </div>
+        </div>
+        <svg id="raincloud-chart"></svg>
+        <div id="legend">
+             <div class="legend-item">
+                <svg width="15" height="15" viewBox="0 0 10 16" class="legend-symbol" style="vertical-align: middle;">
+                    <path d="M2,0 C0,2 0,14 2,16 L8,16 C10,14 10,2 8,0 Z" fill="var(--accent-color-2)" fill-opacity="0.6"></path>
+                </svg>
+                <span>Yield Distribution (Violin)</span>
+             </div>
+             <div class="legend-item"><div class="legend-symbol" style="background: #333; border: 1px solid #aaa; height:10px;"></div> Quartiles & Median (Box)</div>
+             <div class="legend-item"><div class="legend-symbol" style="background: #aaa; width:1px; height:15px;"></div> 1.5 * IQR Range (Whisker)</div>
+             <div class="legend-item"><div class="legend-symbol" style="background: var(--accent-color-1); opacity: 0.6; border-radius: 50%;"></div> Individual Yield (Jittered)</div>
+        </div>
+        <div class="tooltip"></div>
+    </div>
+    
+    <div id="tour-overlay"></div>
+    <div id="tour-popover" class="glass-ui">
+        <h3 id="tour-title"></h3><p id="tour-text"></p>
+        <div class="tour-navigation">
+            <button id="tour-prev" class="glass-ui">Previous</button><span id="tour-step-indicator"></span>
+            <div class="tour-nav-buttons">
+              <button id="tour-end" class="glass-ui">End</button>
+              <button id="tour-next" class="glass-ui">Next</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            function simulateData() {
+                const protocols = ['Stable Yield', 'Blue Chip Fund', 'Volatile Farm', 'New L2 Pool', 'Degen Box'];
+                const config = {
+                    'Stable Yield': { base: 4, vol: 0.8, outlierChance: 0.01 }, 'Blue Chip Fund': { base: 8, vol: 2.5, outlierChance: 0.02 },
+                    'Volatile Farm': { base: 15, vol: 8, outlierChance: 0.05 }, 'New L2 Pool': { base: 25, vol: 15, outlierChance: 0.1 },
+                    'Degen Box': { base: 5, vol: 20, outlierChance: 0.15 }
+                };
+                const data = []; const endDate = new Date(); const startDate = new Date(); startDate.setDate(endDate.getDate() - 365);
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    for (const pName of protocols) {
+                        const p = config[pName]; let yieldValue = p.base + (Math.random() - 0.5) * p.vol * (1 + Math.random());
+                        if (Math.random() < p.outlierChance) yieldValue *= (2 + Math.random() * 3);
+                        if ((pName.includes('Degen') || pName.includes('Volatile')) && Math.random() < 0.03) yieldValue = -Math.random() * 10;
+                        data.push({ date: new Date(d), protocol: pName, yield: Math.max(-15, yieldValue) });
+                    }
+                }
+                return data;
+            }
+
+            const rawData = simulateData(); let chartData = [...rawData];
+            const svg = d3.select("#raincloud-chart"), tooltip = d3.select(".tooltip");
+            const container = document.getElementById('chart-container');
+            let margin = {top: 40, right: 30, bottom: 50, left: 180};
+            
+            let width, height, currentScaleType = 'linear', xScale, yScale;
+            const protocolNames = [...new Set(rawData.map(d => d.protocol))];
+            const colorScale = d3.scaleOrdinal().domain(protocolNames).range([
+                'var(--accent-color-1)','var(--accent-color-2)','var(--accent-color-3)','var(--accent-color-4)','var(--accent-color-5)'
+            ]);
+            
+            const dateStartInput = document.getElementById('date-start'), dateEndInput = document.getElementById('date-end');
+            const extent = d3.extent(rawData, d => d.date);
+            dateStartInput.value = extent[0].toISOString().split('T')[0]; dateEndInput.value = extent[1].toISOString().split('T')[0];
+            dateStartInput.addEventListener('change', filterData); dateEndInput.addEventListener('change', filterData);
+            document.getElementById('scale-toggle').addEventListener('click', toggleScale);
+            
+            function calculateAndSetMargin() {
+                let maxLabelWidth = 0;
+                const tempSvg = d3.select("body").append("svg").style("opacity",0).style("position","absolute");
+                tempSvg.selectAll("text.axis-label").data(protocolNames).enter().append("text")
+                     .style("font-family", 'Space Grotesk, sans-serif').style("font-size", "1rem")
+                     .text(d => d).each(function() { maxLabelWidth = Math.max(maxLabelWidth, this.getComputedTextLength()); });
+                tempSvg.remove();
+                margin.left = maxLabelWidth + 40;
+            }
+
+            const observer = new ResizeObserver(() => { calculateAndSetMargin(); drawChart(); });
+            observer.observe(container);
+            
+            calculateAndSetMargin(); 
+
+            function filterData() {
+                const startDate = new Date(dateStartInput.value), endDate = new Date(dateEndInput.value);
+                if (startDate > endDate) { alert("Start date cannot be after end date."); return; }
+                chartData = rawData.filter(d => d.date >= startDate && d.date <= endDate);
+                drawChart();
+            }
+            
+            function toggleScale() {
+                 currentScaleType = (currentScaleType === 'linear') ? 'log' : 'linear';
+                 d3.select("#scale-toggle").text(currentScaleType === 'linear' ? "Switch to Log" : "Switch to Linear");
+                 drawChart();
+            }
+
+            function kernelDensityEstimator(kernel, X) { return V => X.map(x => [x, d3.mean(V, v => kernel(x - v))]); }
+            function kernelEpanechnikov(k) { return v => Math.abs(v /= k) <= 1 ? 0.75 * (1 - v * v) / k : 0; }
+
+            function drawChart() {
+                svg.selectAll("*").remove();
+                if (chartData.length === 0) {
+                   svg.append("text").attr("x", "50%").attr("y", "50%").attr("text-anchor", "middle").attr("fill", "white").text("No data for selected range.");
+                   return;
+                }
+                
+                const totalHeight = 1200; // 25% less than 1600
+
+                width = container.clientWidth - margin.left - margin.right;
+                height = totalHeight - margin.top - margin.bottom;
+                svg.attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`);
+                const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+                
+                if (currentScaleType === 'log') {
+                    const logDomain = d3.extent(chartData.filter(d => d.yield > 0.01), d => d.yield);
+                    xScale = d3.scaleLog().domain(logDomain.length > 0 ? logDomain : [0.01, 1]).range([0, width]);
+                } else {
+                     xScale = d3.scaleLinear().domain([d3.min(chartData, d => d.yield) - 5, d3.max(chartData, d => d.yield) + 5]).nice().range([0, width]);
+                }
+                yScale = d3.scaleBand().domain(protocolNames).range([0, height]).padding(0.25);
+                
+                g.append("g").attr("transform", `translate(0, ${height})`).call(d3.axisBottom(xScale).ticks(7, ".1s").tickFormat(d => `${d}%`));
+                g.append("text").attr("class", "axis-title").attr("x", width / 2).attr("y", height + margin.bottom - 10).attr("text-anchor", "middle").text("Yield (APY %)");
+                g.append("g").attr("class", "protocol-axis").call(d3.axisLeft(yScale));
+                g.selectAll(".protocol-axis .domain, .protocol-axis .tick line").remove();
+                g.append("g").attr("class", "grid").lower().call(d3.axisBottom(xScale).tickSize(height).tickFormat("")).selectAll("line").style("stroke-opacity", 0.1);
+                
+                const groupedData = d3.group(chartData, d => d.protocol);
+                groupedData.forEach((protocolData, protocolName) => {
+                    const protocolGroup = g.append("g").attr("transform", `translate(0, ${yScale(protocolName)})`).attr("id", `protocol-group-${protocolName.replace(/\s+/g, '-')}`);
+                    
+                    const values = protocolData.map(d => d.yield).sort(d3.ascending);
+                    const q1=d3.quantile(values,.25), median=d3.quantile(values,.5), q3=d3.quantile(values,.75), iqr=q3-q1;
+                    const min = Math.max(d3.min(values), q1 - 1.5 * iqr), max = Math.min(d3.max(values), q3 + 1.5 * iqr);
+                    
+                    const bandCenter = yScale.bandwidth() / 2;
+                    const boxHeight = yScale.bandwidth() * 0.4;
+
+                    protocolGroup.append("line").attr("x1", xScale(min)).attr("x2", xScale(max)).attr("y1", bandCenter).attr("y2", bandCenter).attr("stroke", "#aaa");
+                    protocolGroup.append("rect").attr("x", xScale(q1)).attr("width", xScale(q3) - xScale(q1)).attr("y", bandCenter-boxHeight/2).attr("height", boxHeight).attr("stroke", "#aaa").style("fill", "#333");
+                    protocolGroup.append("line").attr("x1", xScale(median)).attr("x2", xScale(median)).attr("y1", bandCenter-boxHeight/2).attr("y2", bandCenter+boxHeight/2).attr("stroke", "white").style("stroke-width", 2);
+
+                    let kdeValues = (currentScaleType === 'log') ? values.filter(v => v > 0) : values;
+                    if (kdeValues.length > 0) {
+                      const kde = kernelDensityEstimator(kernelEpanechnikov(7), xScale.ticks(50));
+                      const density = kde(kdeValues);
+                      const maxDensity = d3.max(density, d => d[1]);
+                      const violinArea = d3.area().x(d => xScale(d[0])).y0(bandCenter).y1(d => bandCenter - (d[1] * yScale.bandwidth() * 0.9 / maxDensity)).curve(d3.curveCatmullRom);
+                      protocolGroup.append("path").datum(density).attr("d", violinArea).style("fill", colorScale(protocolName)).style("fill-opacity", 0.5).attr("class", "violin-path");
+                    }
+                    
+                    protocolGroup.selectAll(".raindrop").data(values).enter().append("circle").attr("cx", d => xScale(d)).attr("cy", () => bandCenter + boxHeight*0.6 + Math.random()*(bandCenter - boxHeight*0.6)).attr("r", 3).style("fill", colorScale(protocolName)).style("fill-opacity", 0.6)
+                        .on("mouseover", (event, d) => {
+                            const [pointerX, pointerY] = d3.pointer(event, container);
+                            tooltip.style("opacity", 1).html(`<strong>${protocolName}</strong><br>Yield: ${d.toFixed(2)}%`).style("left", pointerX + "px").style("top", pointerY + "px");
+                        }).on("mouseout", () => tooltip.style("opacity", 0));
+                });
+            }
+
+            // --- TOUR FUNCTIONALITY ---
+            const tourOverlay = document.getElementById('tour-overlay'), tourPopover = document.getElementById('tour-popover');
+            let currentTourStep = 0;
+            const tourSteps = [
+                 { element: '#chart-container', title: 'Welcome!', text: 'This tour will guide you through this interactive DeFi yield analysis tool.', position: 'center' },
+                 { element: '.protocol-axis', title: 'Comparing Protocols', text: 'Each horizontal lane represents a DeFi protocol, allowing for direct comparison of their yield characteristics.', position: 'right' },
+                 { element: `[id*='Blue-Chip-Fund'] .violin-path`, title: 'The "Cloud": Yield Distribution', text: 'This half-violin shape shows the density of yields. A wider section means yields frequently occurred at that level, indicating consistency.', position: 'right' },
+                 { element: `[id*='Stable-Yield'] rect`, title: 'The Box & Whiskers', text: 'Inside the cloud, the box plot gives quick stats: the line is the median yield, the box is the middle 50% of returns, and the whiskers show the typical range, excluding extreme outliers.', position: 'right'},
+                 { element: `[id*='Volatile-Farm'] .raindrop`, title: 'The "Rain": Individual Yields', text: 'The scattered dots are the "rain"—each representing a single historical yield. This reveals the entire performance history.', position: 'right' },
+                 { element: `[id*='Degen-Box']`, title: 'Reading Volatility & Outliers', text: 'A long, stretched-out plot like this indicates high volatility and a wide range of returns. Individual raindrops far from the center are extreme outliers.', position: 'right' },
+                 { element: '#controls-group', title: 'Interactive Controls', text: 'Use these controls to filter by date range or switch the yield axis between linear and log scales to better analyze performance and outliers.', position: 'bottom' },
+                 { element: '#chart-container', title: 'Start Analyzing!', text: 'You\'re all set! Hover on any element for detailed tooltips. Use this to identify trends, assess risk, and discover opportunities.', position: 'center' },
+            ];
+            
+            function showTourStep(index) {
+                if (index < 0 || index >= tourSteps.length) return;
+                document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+                currentTourStep = index; const step = tourSteps[index];
+                document.getElementById('tour-title').textContent = step.title;
+                document.getElementById('tour-text').textContent = step.text;
+                document.getElementById('tour-step-indicator').textContent = `${index + 1} / ${tourSteps.length}`;
+                document.getElementById('tour-prev').disabled = index === 0;
+                document.getElementById('tour-next').textContent = (index === tourSteps.length - 1) ? 'Finish' : 'Next';
+                const targetElement = document.querySelector(step.element);
+                if (targetElement) {
+                    targetElement.classList.add('tour-highlight');
+                    const popoverRect = tourPopover.getBoundingClientRect(), targetRect = targetElement.getBoundingClientRect();
+                    tourPopover.style.display = 'block';
+                    if (step.position === 'center') {
+                        tourPopover.style.left = `50%`; tourPopover.style.top = `50%`;
+                        tourPopover.style.transform = `translate(-50%, -50%)`;
+                    } else {
+                        tourPopover.style.transform = `translate(0, 0)`;
+                        switch (step.position) {
+                            case 'right': tourPopover.style.left = `${targetRect.right + 20}px`; tourPopover.style.top = `${targetRect.top + targetRect.height/2 - popoverRect.height/2}px`; break;
+                            case 'left': tourPopover.style.left = `${targetRect.left - popoverRect.width - 20}px`; tourPopover.style.top = `${targetRect.top + targetRect.height/2 - popoverRect.height/2}px`; break;
+                            case 'bottom': tourPopover.style.left = `${targetRect.left + targetRect.width/2 - popoverRect.width/2}px`; tourPopover.style.top = `${targetRect.bottom + 20}px`; break;
+                            case 'top': tourPopover.style.left = `${targetRect.left + targetRect.width/2 - popoverRect.width/2}px`; tourPopover.style.top = `${targetRect.top - popoverRect.height - 20}px`; break;
+                        }
+                    }
+                }
+            }
+            function startTour() { tourOverlay.style.display = 'block'; tourPopover.style.display = 'block'; showTourStep(0); }
+            function endTour() { tourOverlay.style.display = 'none'; tourPopover.style.display = 'none'; document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight')); }
+            
+            document.getElementById('start-tour-btn').addEventListener('click', startTour);
+            document.getElementById('tour-end').addEventListener('click', endTour);
+            document.getElementById('tour-overlay').addEventListener('click', endTour);
+            document.getElementById('tour-next').addEventListener('click', () => { (currentTourStep >= tourSteps.length - 1) ? endTour() : showTourStep(currentTourStep + 1); });
+            document.getElementById('tour-prev').addEventListener('click', () => { showTourStep(currentTourStep - 1); });
+            
+            drawChart(); 
+        });
+    </script>
+</body>
+</html>
