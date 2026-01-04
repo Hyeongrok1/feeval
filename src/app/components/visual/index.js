@@ -3,7 +3,7 @@ import * as d3 from "d3";
 import Scatterplot from "./Scatterplot";
 import Histogram from "./Histogram";
 // import {getCosineSimilarity } from "../explain";
-import { get_average_cosine_similarity } from './static';
+import { get_average_cosine_similarity } from '../explain/static';
 
 let scatterplot;
 let histogram1;

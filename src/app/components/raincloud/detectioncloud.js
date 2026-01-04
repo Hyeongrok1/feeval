@@ -58,24 +58,33 @@ export default function DetectionCloud() {
 
             // 3. 각 카테고리별로 그리기 (반복문)
             allDensities.forEach((cat, i) => {
-                // (1) Cloud 영역 (Area)
+                // cloud
                 svg.append("path")
                     .datum(cat.density)
                     .attr("fill", cat.color)
-                    .attr("opacity", "0.3") // 겹치므로 투명도를 낮춤
+                    .attr("opacity", "0.3") 
                     .attr("stroke", cat.color)
                     .attr("stroke-width", 1.5)
+                    .attr("class", cat.label) 
                     .attr("d", d3.area()
                         .curve(d3.curveBasis)
                         .x(d => x(d[0]))
                         .y0(height) 
                         .y1(d => y(d[1])) 
-                    ).on("mouseover", function() {
-                        d3.selectAll("path").style("opacity", 0.1); 
-                        d3.select(this).style("opacity", 0.7);     
+                    )
+                    .on("mouseover", function(event, d) {
+                        const className = d3.select(this).attr("class");
+                        
+                        d3.selectAll("path").style("opacity", 0.05); 
+                        
+                        d3.selectAll("." + className)
+                            .style("opacity", 0.7)
+                            .style("stroke-width", 2);
                     })
                     .on("mouseleave", function() {
-                        d3.selectAll("path").style("opacity", 0.3); 
+                        d3.selectAll("path")
+                            .style("opacity", "0.3")
+                            .style("stroke-width", 1.5);
                     });
 
                 // (2) Rain (개별 점 - 하단 Jitter)
@@ -99,7 +108,26 @@ export default function DetectionCloud() {
                 .attr("transform", (d, i) => `translate(${width - 100}, ${i * 20 - 30})`);
 
             legend.append("rect").attr("width", 15).attr("height", 15).style("fill", d => d.color);
-            legend.append("text").attr("x", 20).attr("y", 12).text(d => d.label).style("font-size", "12px");
+            legend.append("text")
+                .attr("x", 20)
+                .attr("y", 12)
+                .text(d => d.label)
+                .attr("class", d => d.label)
+                .style("font-size", "12px")
+                .on("mouseover", function() {
+                    const className = d3.select(this).attr("class");
+                        
+                    d3.selectAll("path").style("opacity", 0.05); 
+                    
+                    d3.selectAll("." + className)
+                        .style("opacity", 0.7)
+                        .style("stroke-width", 2);
+                })
+                .on("mouseleave", function() {
+                    d3.selectAll("path")
+                        .style("opacity", "0.3")
+                    .style("stroke-width", 1.5);
+                });
         });
         
     }, []);

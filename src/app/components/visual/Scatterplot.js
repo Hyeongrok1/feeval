@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 // import { getFeatureExplains} from "../explain";
-import { get_explains } from './static';
+import { get_explains } from '../explain/static';
 
 import Histogram from "./Histogram";
 

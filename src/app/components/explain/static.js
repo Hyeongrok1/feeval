@@ -54,7 +54,6 @@ export async function get_explains(featureId) {
     
     if (foundFeature) explanation = foundFeature.explanations;
     
-    
     if (explanation === null || explanation === undefined) {
         const defaultItem = {
             llm_explainer: "",
@@ -71,7 +70,7 @@ export async function get_explains(featureId) {
         const scores = item.scores || {}; 
         
         return {
-            llm_explainer: item.llm_explainer,
+            explainer: item.llm_explainer,
             detection: scores.detection || 0, 
             embedding: scores.embedding || 0,
             fuzz: scores.fuzz || 0,
