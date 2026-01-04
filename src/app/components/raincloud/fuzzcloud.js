@@ -19,7 +19,7 @@ export default function FuzzCloud() {
 
         const margin = {top: 50, right: 30, bottom: 50, left: 60},
             width = 500 - margin.left - margin.right,
-            height = 300 - margin.top - margin.bottom;
+            height = 200 - margin.top - margin.bottom;
 
         const svg = d3.select(chartRef.current)
             .append("svg")
@@ -31,23 +31,19 @@ export default function FuzzCloud() {
         get_scores().then(function(rawData) {
             if (!rawData || rawData.length === 0) return;
 
-            // 1. 데이터 카테고리 설정 (비교할 3가지 그룹)
             const categories = [
                 { key: 'first_fuzz', label: 'First', color: '#69b3a2' },
                 { key: 'second_fuzz', label: 'Second', color: '#404080' },
                 { key: 'third_fuzz', label: 'Third', color: '#f8b195' }
             ];
 
-            // 2. 축 설정
             const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
             svg.append("g")
                 .attr("transform", `translate(0, ${height})`)
                 .call(d3.axisBottom(x));
 
-            // KDE 도구 (대역폭 0.05)
             const kde = kernelDensityEstimator(kernelEpanechnikov(0.05), x.ticks(50));
             
-            // 모든 카테고리의 밀도 데이터를 미리 계산하여 최대 Y값 찾기
             const allDensities = categories.map(cat => ({
                 ...cat,
                 density: kde(rawData.map(d => d[cat.key]))
@@ -56,7 +52,6 @@ export default function FuzzCloud() {
             const maxY = d3.max(allDensities, c => d3.max(c.density, d => d[1]));
             const y = d3.scaleLinear().range([height, 0]).domain([0, maxY * 1.1]);
 
-            // 3. 각 카테고리별로 그리기 (반복문)
             allDensities.forEach((cat, i) => {
                 // cloud
             // cloud 영역
@@ -89,21 +84,18 @@ export default function FuzzCloud() {
                     });
 
 
-                // (2) Rain (개별 점 - 하단 Jitter)
-                // 점들이 너무 겹치지 않게 카테고리별로 Y축 위치를 살짝 다르게 배치 가능
                 svg.selectAll(`.dot-${cat.key}`)
-                    .data(rawData.filter((_, idx) => idx % 10 === 0)) // 샘플링
+                    .data(rawData.filter((_, idx) => idx % 10 === 0)) 
                     .enter()
                     .append("circle")
                     .attr("cx", d => x(d[cat.key]))
-                    .attr("cy", height + 10 + (i * 15)) // 카테고리별로 층을 나눔
+                    .attr("cy", height + 10 + (i * 15)) 
                     .attr("r", 2)
                     .style("fill", cat.color)
                     .attr("opacity", 0.4)
                     .attr("transform", () => `translate(0, ${Math.random() * 10})`);
             });
 
-            // 4. 범례 (Legend) 추가
             const legend = svg.selectAll(".legend")
                 .data(categories)
                 .enter().append("g")

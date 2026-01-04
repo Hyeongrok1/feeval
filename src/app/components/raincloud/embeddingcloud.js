@@ -19,7 +19,7 @@ export default function EmbeddingCloud() {
 
         const margin = {top: 50, right: 30, bottom: 50, left: 60},
             width = 500 - margin.left - margin.right,
-            height = 300 - margin.top - margin.bottom;
+            height = 200 - margin.top - margin.bottom;
 
         const svg = d3.select(chartRef.current)
             .append("svg")
@@ -31,23 +31,19 @@ export default function EmbeddingCloud() {
         get_scores().then(function(rawData) {
             if (!rawData || rawData.length === 0) return;
 
-            // 1. 데이터 카테고리 설정 (비교할 3가지 그룹)
             const categories = [
                 { key: 'first_embedding', label: 'First', color: '#69b3a2' },
                 { key: 'second_embedding', label: 'Second', color: '#404080' },
                 { key: 'third_embedding', label: 'Third', color: '#f8b195' }
             ];
 
-            // 2. 축 설정
             const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
             svg.append("g")
                 .attr("transform", `translate(0, ${height})`)
                 .call(d3.axisBottom(x));
 
-            // KDE 도구 (대역폭 0.05)
             const kde = kernelDensityEstimator(kernelEpanechnikov(0.05), x.ticks(50));
             
-            // 모든 카테고리의 밀도 데이터를 미리 계산하여 최대 Y값 찾기
             const allDensities = categories.map(cat => ({
                 ...cat,
                 density: kde(rawData.map(d => d[cat.key]))
@@ -56,7 +52,6 @@ export default function EmbeddingCloud() {
             const maxY = d3.max(allDensities, c => d3.max(c.density, d => d[1]));
             const y = d3.scaleLinear().range([height, 0]).domain([0, maxY * 1.1]);
 
-            // 3. 각 카테고리별로 그리기 (반복문)
             allDensities.forEach((cat, i) => {
                 
                 svg.append("path")

@@ -17,7 +17,7 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
 
         const margin = { top: 60, right: 80, bottom: 50, left: 80 },
             width = 1500 - margin.left - margin.right,
-            height = 1000 - margin.top - margin.bottom;
+            height = 715 - margin.top - margin.bottom;
 
         let svgElement = d3.select(chartRef.current).select("svg");
         if (svgElement.empty()) {
@@ -30,13 +30,13 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
         }
         const svg = svgElement.select(".main-g");
 
-        // 2. 스케일 설정
+        // scale
         const dimensions = [`${selectedModel}_embedding`, `${selectedModel}_fuzz`, `${selectedModel}_detection` ];
         const xScale = d3.scalePoint().range([0, width]).domain(dimensions).padding(0.3);
         const yScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
         const colorMap = { first: "#69b3a2", second: "#404080", third: "#f8b195" };
 
-        // 스타일 업데이트 로직 (브러시/클릭 시 적용)
+        // brush/click
         const updateStyles = () => {
             const activeFilters = filtersRef.current;
             svg.selectAll(".feature-line").each(function(d) {
@@ -138,7 +138,7 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
                 </div>
             </div>
             <div className="d-flex flex-column align-items-center w-100 p-4"
-            ref={chartRef} style={{ minHeight: '1000px', background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}></div>
+            ref={chartRef} style={{ minHeight: '715px', background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}></div>
         </div>
     );
 }
