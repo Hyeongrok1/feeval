@@ -11,7 +11,7 @@ export default function Header() {
                 <div className="container-fluid">
                     <div style={{ 
                         marginTop: '1px',      
-                        padding: '5px 103px',   
+                        padding: '5px 86px',   
                         display: 'inline-block',
                         background: '#fff', 
                         borderRadius: '12px', 
@@ -19,7 +19,7 @@ export default function Header() {
                         fontWeight: 'bold',   
                         fontSize: '28px'       
                     }}>
-                        Feature Evaluation Explainer
+                        Feature Explanation Evaluation
                     </div>
                 </div>
             </nav>

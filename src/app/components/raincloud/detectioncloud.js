@@ -28,14 +28,23 @@ export default function DetectionCloud() {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
+        svg.append("text")
+            .attr("x", 0)             
+            .attr("y", -margin.top / 2) 
+            .attr("text-anchor", "start")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#4a4a4a")
+            .text("Detection");
+
         get_scores().then(function(rawData) {
             if (!rawData || rawData.length === 0) return;
 
             // three groups
             const categories = [
-                { key: 'first_detection', label: 'First', color: '#69b3a2' },
-                { key: 'second_detection', label: 'Second', color: '#404080' },
-                { key: 'third_detection', label: 'Third', color: '#f8b195' }
+                { key: 'first_detection', label: 'hugging-quants', color: '#69b3a2' },
+                { key: 'second_detection', label: 'Qwen', color: '#404080' },
+                { key: 'third_detection', label: 'openai', color: '#f8b195' }
             ];
 
             // axis

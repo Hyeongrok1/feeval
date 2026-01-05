@@ -27,14 +27,23 @@ export default function EmbeddingCloud() {
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+        svg.append("text")
+            .attr("x", 0)             
+            .attr("y", -margin.top / 2) 
+            .attr("text-anchor", "start")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#4a4a4a")
+            .text("Embedding");
 
         get_scores().then(function(rawData) {
             if (!rawData || rawData.length === 0) return;
 
             const categories = [
-                { key: 'first_embedding', label: 'First', color: '#69b3a2' },
-                { key: 'second_embedding', label: 'Second', color: '#404080' },
-                { key: 'third_embedding', label: 'Third', color: '#f8b195' }
+                { key: 'first_detection', label: 'hugging-quants', color: '#69b3a2' },
+                { key: 'second_detection', label: 'Qwen', color: '#404080' },
+                { key: 'third_detection', label: 'openai', color: '#f8b195' }
             ];
 
             const x = d3.scaleLinear().domain([0, 1]).range([0, width]);

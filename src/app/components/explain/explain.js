@@ -11,7 +11,7 @@ export default function ExplainView({ selectedFeatureId }) {
             height = 185 - margin.top - margin.bottom;
 
         const ids = ["first", "second", "third"];
-        const titles = ["LLM 1 (Gemini)", "LLM 2 (OpenAI)", "LLM 3 (Llama)"];
+        const titles = ["LLM 1 (hugging-quants)", "LLM 2 (Qwen)", "LLM 3 (openai)"];
 
         let svgContainer = d3.select(chartRef.current);
         

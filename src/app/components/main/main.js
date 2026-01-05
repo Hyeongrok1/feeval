@@ -11,19 +11,23 @@ export default function Main() {
         <div className="container-fluid p-0 bg-light min-vh-100 d-flex flex-column">
             
             <div className="d-flex flex-grow-1 overflow-hidden">
+                {/* View A */}
                 <div className="p-2" style={{ height: '400px' }}>
                     <Header />
                     <ViewA featureId={selectedFeatureId} onSelect={setSelectedFeatureId} />
                 </div>
 
+                {/* View B */}
                 <div className="flex-grow-1 d-flex col-md-6 flex-column overflow-hidden">    
                     <ViewB selectedFeatureId={selectedFeatureId} setSelectedFeatureId={setSelectedFeatureId} />
                 </div>
+
+                {/* View C */}
                 <div className="flex-grow-1 d-flex col-md-6 flex-column overflow-hidden">    
                     <ViewC selectedFeatureId={selectedFeatureId} />
                 </div>
 
-                {/* C */}
+                {/* not implemented */}
                 <div className="flex-grow-1 d-flex flex-column overflow-hidden">
                     
 
@@ -39,7 +43,7 @@ export default function Main() {
                             <div className="p-3 bg-white" style={{ width: '400px', overflowY: 'auto' }}>
                                 <div className="h-100 border rounded p-3 shadow-sm">
                                     <h6 className="fw-bold text-secondary border-bottom pb-2">View D: Detail Info</h6>
-                                    <p className="small mt-2">ID: {selectedFeatureId || '선택된 피처 없음'}</p>
+                                    <p className="small mt-2">ID: {selectedFeatureId || 'no Selected Features'}</p>
                                 </div>
                             </div>
                         </div>
@@ -47,8 +51,8 @@ export default function Main() {
                         <div className="p-3 bg-light border-start shadow-sm" style={{ width: '280px', overflowY: 'auto' }}>
                             <div className="h-100 border rounded p-3 bg-white shadow-sm">
                                 <h6 className="fw-bold text-secondary border-bottom pb-2">View E: Tags</h6>
-                                <div className="badge bg-primary m-1">High Detection</div>
-                                <div className="badge bg-success m-1">Low Fuzz</div>
+                                {/* <div className="badge bg-primary m-1">High Detection</div>
+                                <div className="badge bg-success m-1">Low Fuzz</div> */}
                             </div>
                         </div>
 

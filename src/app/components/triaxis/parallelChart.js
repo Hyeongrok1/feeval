@@ -8,6 +8,7 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
     const [scoreData, setScoreData] = useState([]);
     const filtersRef = useRef(new Map());
 
+    // get all scores
     useEffect(() => {
         get_scores().then(data => { if (data && data.length > 0) setScoreData(data); });
     }, []);
@@ -19,6 +20,7 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
             width = 1500 - margin.left - margin.right,
             height = 715 - margin.top - margin.bottom;
 
+        // svg
         let svgElement = d3.select(chartRef.current).select("svg");
         if (svgElement.empty()) {
             svgElement = d3.select(chartRef.current)
@@ -36,9 +38,10 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
         const yScale = d3.scaleLinear().domain([0, 1]).range([height, 0]);
         const colorMap = { first: "#69b3a2", second: "#404080", third: "#f8b195" };
 
-        // brush/click
+        // when brushed/clicked
         const updateStyles = () => {
             const activeFilters = filtersRef.current;
+            
             svg.selectAll(".feature-line").each(function(d) {
                 const isMatch = Array.from(activeFilters).every(([dim, [max, min]]) => d[dim] >= min && d[dim] <= max);
                 const isSelected = d.feature_id === selectedFeatureId;
@@ -46,9 +49,15 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
 
                 if (isMatch) {
                     if (isSelected) {
-                        element.style("stroke", "red").style("stroke-width", "4px").style("opacity", 1).raise();
+                        element.style("stroke", "red")
+                            .style("stroke-width", "4px")
+                            .style("opacity", 1)
+                            .raise();
                     } else {
-                        element.style("stroke", colorMap[selectedModel]).style("stroke-width", "1.5px").style("opacity", selectedFeatureId === null ? 0.4 : 0.1);
+                        element
+                            .style("stroke", colorMap[selectedModel])
+                            .style("stroke-width", "1.5px")
+                            .style("opacity", selectedFeatureId === null ? 0.4 : 0.1);
                     }
                 } else {
                     element.style("stroke", "#eee").style("stroke-width", "1px").style("opacity", 0.02);
@@ -63,13 +72,14 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
             updateStyles();
         };
 
-        // 3. 데이터 선(Path) 그리기 - 핵심 Transition 영역
+        // draw path 
         const lineGenerator = d3.line();
         const drawPath = (d) => lineGenerator(dimensions.map(dim => [xScale(dim), yScale(d[dim])]));
 
         const paths = svg.selectAll(".feature-line")
             .data(scoreData, d => d.feature_id);
 
+        
         paths.enter()
             .append("path")
             .attr("class", "feature-line")
@@ -78,33 +88,53 @@ export default function ParallelChart({ selectedFeatureId, setSelectedFeatureId 
             .on("mouseover", function(event, d) {
                 const activeFilters = filtersRef.current;
                 const isMatch = Array.from(activeFilters).every(([dim, [max, min]]) => d[dim] >= min && d[dim] <= max);
-                if (isMatch) {
-                    d3.select(this).raise().transition().duration(100).style("stroke-width", "6px").style("stroke", "orange").style("opacity", 1);
+                const isSelected = d.feature_id === selectedFeatureId;
+
+                if (isSelected) {
+                    d3.select(this).raise().transition().duration(50)
+                        .style("stroke", "red")
+                        .style("stroke-width", "5px")
+                        .style("opacity", 1);
+                }
+                else if (isMatch) {
+                    d3.select(this)
+                        .raise()
+                        .transition()
+                        .duration(100)
+                        .style("stroke-width", "3px")
+                        .style("stroke", "orange")
+                        .style("opacity", 1);
                 }
             })
             .on("mouseout", function(event, d) {
-                updateStyles(); // 원래 스타일로 복구
+                updateStyles(); 
             })
             .on("click", (event, d) => setSelectedFeatureId(prev => prev === d.feature_id ? null : d.feature_id))
-            .merge(paths) // [핵심] 기존 선들과 새로 고칠 선들을 합침
-            .transition().duration(750) // [핵심] 모델 변경 시 부드럽게 이동
+            .merge(paths) 
+            .transition().duration(750) // smooth transition
             .attr("d", drawPath);
 
-        const axes = svg.selectAll(".axis-group").data(dimensions, d => d.split('_')[1]);
-        const axesEnter = axes.enter().append("g").attr("class", "axis-group");
+        // axis
+        const axis = svg.selectAll(".axis-group").data(dimensions, d => d.split('_')[1]);
+        const axisEnter = axis.enter().append("g").attr("class", "axis-group");
         
-        axesEnter.append("text").attr("class", "axis-label").attr("y", -25).style("text-anchor", "middle").style("font-weight", "bold").style("font-size", "14px");
+        axisEnter.append("text")
+            .attr("class", "axis-label")
+            .attr("y", -25)
+            .style("text-anchor", "middle")
+            .style("font-weight", "bold")
+            .style("font-size", "14px");
 
-        const axesMerged = axes.merge(axesEnter);
+        const axisMerged = axis.merge(axisEnter);
         
-        // 축 위치는 transition 없이 즉시 고정
-        axesMerged.attr("transform", d => `translate(${xScale(d)})`)
+        // fixed axis
+        axisMerged.attr("transform", d => `translate(${xScale(d)})`)
             .each(function(d) { d3.select(this).call(d3.axisLeft(yScale).ticks(5)); });
 
-        axesMerged.select(".axis-label").text(d => d.split('_')[1].toUpperCase());
+        axisMerged.select(".axis-label").text(d => d.split('_')[1].toUpperCase());
 
-        // 5. 브러시 UI 업데이트
-        axesMerged.each(function(dim) {
+        // bruch UI update
+        axisMerged.each(function(dim) {
             const brush = d3.brushY()
                 .extent([[-20, 0], [20, height]])
                 .on("brush end", (event) => onBrush(event, dim));

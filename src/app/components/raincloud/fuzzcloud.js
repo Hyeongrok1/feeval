@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 export default function FuzzCloud() {
     const chartRef = useRef(null);
 
+    // kernel Density Estimation
     const kernelDensityEstimator = (kernel, X) => {
         return (V) => X.map(x => [x, d3.mean(V, v => kernel(x - v))]);
     };
@@ -21,6 +22,7 @@ export default function FuzzCloud() {
             width = 500 - margin.left - margin.right,
             height = 200 - margin.top - margin.bottom;
 
+        // svg
         const svg = d3.select(chartRef.current)
             .append("svg")
             .attr("width", width + margin.left + margin.right)
@@ -28,13 +30,23 @@ export default function FuzzCloud() {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
+        svg.append("text")
+            .attr("x", 0)             
+            .attr("y", -margin.top / 2) 
+            .attr("text-anchor", "start")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#4a4a4a")
+            .text("Fuzz");
+
+        // get the scores
         get_scores().then(function(rawData) {
             if (!rawData || rawData.length === 0) return;
 
             const categories = [
-                { key: 'first_fuzz', label: 'First', color: '#69b3a2' },
-                { key: 'second_fuzz', label: 'Second', color: '#404080' },
-                { key: 'third_fuzz', label: 'Third', color: '#f8b195' }
+                { key: 'first_fuzz', label: 'hugging-quants', color: '#69b3a2' },
+                { key: 'second_fuzz', label: 'Qwen', color: '#404080' },
+                { key: 'third_fuzz', label: 'openai', color: '#f8b195' }
             ];
 
             const x = d3.scaleLinear().domain([0, 1]).range([0, width]);
@@ -54,7 +66,6 @@ export default function FuzzCloud() {
 
             allDensities.forEach((cat, i) => {
                 // cloud
-            // cloud 영역
                 svg.append("path")
                     .datum(cat.density)
                     .attr("fill", cat.color)
